@@ -1,0 +1,244 @@
+openapi: 3.0.0
+info:
+  title: Geonames Lookup API
+  description: An API to look up geonames data with options for single and bulk place lookups.
+  version: 1.0.0
+servers:
+  - url: /v1
+    description: Version 1 of the API
+
+paths:
+  /places:
+    get:
+      summary: Lookup places by name (with optional country)
+      description: Retrieve a list of places based on their name and optionally filter by country. Handles ambiguous names.
+      parameters:
+        - name: name
+          in: query
+          required: true
+          description: The name of the place.
+          schema:
+            type: string
+            example: "Bruges"
+        - name: country
+          in: query
+          required: false
+          description: ISO 3166-1 alpha-2 country code to narrow the search.
+          schema:
+            type: string
+            example: "BE"
+      responses:
+        200:
+          description: List of places matching the search criteria.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    geonameId:
+                      type: integer
+                      example: 123456
+                    name:
+                      type: string
+                      example: "Bruges"
+                    country:
+                      type: string
+                      example: "BE"
+                    latitude:
+                      type: number
+                      format: float
+                      example: 51.2093
+                    longitude:
+                      type: number
+                      format: float
+                      example: 3.2247
+        404:
+          description: No places found.
+
+  /places/bulk:
+    post:
+      summary: Bulk lookup of places by name (with optional country)
+      description: Retrieve a list of places based on multiple names and optionally filter by country.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    example: "Bruges"
+                  country:
+                    type: string
+                    required: false
+                    example: "BE"
+      responses:
+        200:
+          description: List of places matching the search criteria.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    geonameId:
+                      type: integer
+                      example: 123456
+                    name:
+                      type: string
+                      example: "Bruges"
+                    country:
+                      type: string
+                      example: "BE"
+                    latitude:
+                      type: number
+                      format: float
+                      example: 51.2093
+                    longitude:
+                      type: number
+                      format: float
+                      example: 3.2247
+        404:
+          description: No places found.
+
+  /place/{geonameId}:
+    get:
+      summary: Retrieve detailed information about a place by its geonameId.
+      description: Retrieve information such as the name, country, coordinates, and more for a specific geonameId.
+      parameters:
+        - name: geonameId
+          in: path
+          required: true
+          description: The Geonames ID of the place.
+          schema:
+            type: integer
+            example: 123456
+      responses:
+        200:
+          description: Detailed information about the place.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  geonameId:
+                    type: integer
+                    example: 123456
+                  name:
+                    type: string
+                    example: "Bruges"
+                  country:
+                    type: string
+                    example: "BE"
+                  latitude:
+                    type: number
+                    format: float
+                    example: 51.2093
+                  longitude:
+                    type: number
+                    format: float
+                    example: 3.2247
+                  population:
+                    type: integer
+                    example: 118284
+                  timezone:
+                    type: string
+                    example: "Europe/Brussels"
+        404:
+          description: Place not found.
+
+  /place/{geonameId}/name:
+    get:
+      summary: Retrieve the name of a place (optionally in a specific language).
+      description: Returns the name of a place in a specified or default language in plain text. If no language is provided, returns the default name.
+      parameters:
+        - name: geonameId
+          in: path
+          required: true
+          description: The Geonames ID of the place.
+          schema:
+            type: integer
+            example: 123456
+        - name: language
+          in: query
+          required: false
+          description: ISO 639-1 language code (e.g., "nl" for Dutch). If omitted, the default name is returned.
+          schema:
+            type: string
+            example: "nl"
+      responses:
+        200:
+          description: The name of the place in plain text.
+          content:
+            text/plain:
+              schema:
+                type: string
+        404:
+          description: Place not found.
+
+  /place/{geonameId}/alternatenames:
+    get:
+      summary: Retrieve alternate names of a place by geonameId.
+      description: Returns a list of alternate names (with language codes) for a given place.
+      parameters:
+        - name: geonameId
+          in: path
+          required: true
+          description: The Geonames ID of the place.
+          schema:
+            type: integer
+            example: 123456
+      responses:
+        200:
+          description: List of alternate names for the place.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      example: "Bruges"
+                    language:
+                      type: string
+                      example: "fr"
+        404:
+          description: Place not found.
+
+components:
+  schemas:
+    Place:
+      type: object
+      properties:
+        geonameId:
+          type: integer
+          example: 123456
+        name:
+          type: string
+          example: "Bruges"
+        country:
+          type: string
+          example: "BE"
+        latitude:
+          type: number
+          format: float
+          example: 51.2093
+        longitude:
+          type: number
+          format: float
+          example: 3.2247
+        population:
+          type: integer
+          example: 118284
+        timezone:
+          type: string
+          example: "Europe/Brussels"
+
