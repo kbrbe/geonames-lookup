@@ -5,6 +5,8 @@ __pycache__/
 
 py-geonames-lookup-env
 
+.*.swp
+
 # C extensions
 *.so
 

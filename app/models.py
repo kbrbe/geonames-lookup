@@ -1,4 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import relationship
+from sqlalchemy import ForeignKey
 
 db = SQLAlchemy()
 
@@ -28,13 +30,15 @@ class AlternateName(db.Model):
     __tablename__ = 'alternatename'
 
     alternatenameId = db.Column(db.Integer, primary_key=True)
-    geonameid = db.Column(db.Integer, index=True)
+    geonameid = db.Column(db.Integer, db.ForeignKey('geoname.geonameid'))
     isoLanguage = db.Column(db.String(7), index=True)
     alternateName = db.Column(db.String(200))
     isPreferredName = db.Column(db.Boolean)
     isShortName = db.Column(db.Boolean)
     isColloquial = db.Column(db.Boolean)
     isHistoric = db.Column(db.Boolean)
+
+    geoname = relationship('Geoname', back_populates='alternate_names_table')
 
     def __repr__(self):
         return f"<AlternateName(alternateName={self.alternateName}, isoLanguage={self.isoLanguage})>"
@@ -108,20 +112,29 @@ class Geoname(db.Model):
     timezone = db.Column(db.String(40))
     moddate = db.Column(db.Date)
 
+    alternate_names_table = relationship('AlternateName', back_populates='geoname')
+
     def __repr__(self):
         return f"<Geoname(name={self.name}, geonameid={self.geonameid})>"
 
     # app/models.py
     def to_dict(self):
-        return {
+        geoname_dict = {
             'geonameId': self.geonameid,
             'name': self.name,
             'country': self.country,
             'latitude': float(self.latitude),
-            'longitude': float(self.longitude)
+            'longitude': float(self.longitude),
+            'alternate_names': {}
         }
 
-
+        # Populate the alternate names
+        for alt_name in self.alternate_names_table:
+            if alt_name.isoLanguage not in geoname_dict['alternate_names']:
+                geoname_dict['alternate_names'][alt_name.isoLanguage] = []
+            geoname_dict['alternate_names'][alt_name.isoLanguage].append(alt_name.alternateName)
+        
+        return geoname_dict
 
 class Hierarchy(db.Model):
     __tablename__ = 'hierarchy'
