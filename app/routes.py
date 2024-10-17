@@ -23,6 +23,34 @@ def register_routes(app):
         return jsonify([place.to_dict() for place in results]), (200 if results else 404)
 
     #--------------------------------------------------------------------------
+    @app.route('/placename', methods=['GET'])
+    def get_placename():
+        name = request.args.get('name')
+        country = request.args.get('country')
+        language = request.args.get('language')
+        query = db.session.query(Geoname) \
+        .join(AlternateName, Geoname.geonameid == AlternateName.geonameid) \
+        .filter(AlternateName.alternateName == name) \
+        .filter(Geoname.fclass == 'P') \
+        .filter(Geoname.fcode.like('PPL%'))
+        if country:
+            query = query.filter(Geoname.country == country)
+        result = query.first()
+
+        if language:
+          if result:
+            for alt in result.alternate_names_table:
+              if alt.isoLanguage == language:
+                return alt.alternateName, 200
+          return '', 404
+        else:
+          if result:
+            return result.name, 200
+          else:
+            return '', 404
+
+
+    #--------------------------------------------------------------------------
 #    @app.route('/places/bulk', methods=['POST'])
 #    def bulk_lookup():
 #        data = request.json

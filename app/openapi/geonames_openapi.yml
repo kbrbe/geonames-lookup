@@ -8,6 +8,42 @@ servers:
     description: Version 1 of the API
 
 paths:
+  /placename:
+    get:
+      summary: Lookup placename by alternate name (with optional country and language)
+      description: Retrieve the name of the place in the specified language optionally filter by country. Handles ambiguous names. If no language is given, the main spelling is returned
+      parameters:
+        - name: name
+          in: query
+          required: true
+          description: The (alternate) name of the place.
+          schema:
+            type: string
+            example: "Bruges"
+        - name: country
+          in: query
+          required: false
+          description: ISO 3166-1 alpha-2 country code to narrow the search.
+          schema:
+            type: string
+            example: "BE"
+        - name: language
+          in: query
+          required: false
+          description: language code like en, nl of de to specify the spelling of the output.
+          schema:
+            type: string
+            example: "en"
+      responses:
+        200:
+          description: The name of the place in plain text.
+          content:
+            text/plain:
+              schema:
+                type: string
+        404:
+          description: Place not found.
+
   /places:
     get:
       summary: Lookup places by name (with optional country)
