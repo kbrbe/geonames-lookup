@@ -1,6 +1,8 @@
 # app/routes.py
 from flask import jsonify, request
-from .models import Geoname, AlternateName
+from .models import Geoname, AlternateName, CountryInfo
+from sqlalchemy import or_
+from sqlalchemy.orm import aliased
 from . import db
 
 def register_routes(app):
@@ -9,14 +11,24 @@ def register_routes(app):
     @app.route('/places', methods=['GET'])
     def get_places():
         name = request.args.get('name')
-        country = request.args.get('country')
+        country = request.args.get('countryName')
+        countryCode = request.args.get('countryCode')
+
         query = db.session.query(Geoname) \
         .join(AlternateName, Geoname.geonameid == AlternateName.geonameid) \
         .filter(AlternateName.alternateName == name) \
         .filter(Geoname.fclass == 'P') \
         .filter(Geoname.fcode.like('PPL%'))
-        if country:
-            query = query.filter(Geoname.country == country)
+
+        if countryCode:
+          query = query.filter(Geoname.country == countryCode)
+        elif country:
+            AlternateNameCountry = aliased(AlternateName)
+
+            query = query.join(CountryInfo, Geoname.country == CountryInfo.iso_alpha2) \
+            .join(AlternateNameCountry, CountryInfo.geonameId == AlternateNameCountry.geonameid) \
+            .filter(AlternateNameCountry.alternateName == country)
+
         results = query.all()
 
        
@@ -26,15 +38,25 @@ def register_routes(app):
     @app.route('/placename', methods=['GET'])
     def get_placename():
         name = request.args.get('name')
-        country = request.args.get('country')
+        country = request.args.get('countryName')
+        countryCode = request.args.get('countryCode')
         language = request.args.get('language')
+
         query = db.session.query(Geoname) \
         .join(AlternateName, Geoname.geonameid == AlternateName.geonameid) \
         .filter(AlternateName.alternateName == name) \
         .filter(Geoname.fclass == 'P') \
         .filter(Geoname.fcode.like('PPL%'))
-        if country:
-            query = query.filter(Geoname.country == country)
+
+        if countryCode:
+          query = query.filter(Geoname.country == countryCode)
+        elif country:
+            AlternateNameCountry = aliased(AlternateName)
+
+            query = query.join(CountryInfo, Geoname.country == CountryInfo.iso_alpha2) \
+            .join(AlternateNameCountry, CountryInfo.geonameId == AlternateNameCountry.geonameid) \
+            .filter(AlternateNameCountry.alternateName == country)
+
         result = query.first()
 
         if language:

@@ -32,7 +32,7 @@ class AlternateName(db.Model):
     alternatenameId = db.Column(db.Integer, primary_key=True)
     geonameid = db.Column(db.Integer, db.ForeignKey('geoname.geonameid'))
     isoLanguage = db.Column(db.String(7), index=True)
-    alternateName = db.Column(db.String(200))
+    alternateName = db.Column(db.String(200), index=True)
     isPreferredName = db.Column(db.Boolean)
     isShortName = db.Column(db.Boolean)
     isColloquial = db.Column(db.Boolean)
