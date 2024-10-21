@@ -1,9 +1,35 @@
 # app/routes.py
 from flask import jsonify, request
 from .models import Geoname, AlternateName, CountryInfo
-from sqlalchemy import or_
 from sqlalchemy.orm import aliased
 from . import db
+
+ #-----------------------------------------------------------------------------
+def getPlaceQuery(name, country, countryCode):
+  """This function builds the query, but without the actual filter on the name.
+     The name filter has to be applied afterwards. This enables us to create two
+     queries, one with filtering on the main spelling and one filtering on alternate spellings.
+     Both queries can be put together with a union afterwards.
+     This is done as performance optimization, because a logical OR filter was very slow.
+  """
+
+  query = db.session.query(Geoname) \
+  .join(AlternateName, Geoname.geonameid == AlternateName.geonameid) \
+  .filter(Geoname.fclass == 'P') \
+  .filter(Geoname.fcode.like('PPL%'))
+
+  if countryCode:
+    query = query.filter(Geoname.country == countryCode)
+  elif country:
+      AlternateNameCountry = aliased(AlternateName)
+
+      query = query.join(CountryInfo, Geoname.country == CountryInfo.iso_alpha2) \
+      .join(AlternateNameCountry, CountryInfo.geonameId == AlternateNameCountry.geonameid) \
+      .filter(AlternateNameCountry.alternateName == country)
+
+  return query
+
+
 
 def register_routes(app):
 
@@ -14,20 +40,13 @@ def register_routes(app):
         country = request.args.get('countryName')
         countryCode = request.args.get('countryCode')
 
-        query = db.session.query(Geoname) \
-        .join(AlternateName, Geoname.geonameid == AlternateName.geonameid) \
+        queryMainSpelling =  getPlaceQuery(name, country, countryCode) \
         .filter(AlternateName.alternateName == name) \
-        .filter(Geoname.fclass == 'P') \
-        .filter(Geoname.fcode.like('PPL%'))
 
-        if countryCode:
-          query = query.filter(Geoname.country == countryCode)
-        elif country:
-            AlternateNameCountry = aliased(AlternateName)
+        queryAlternateSpelling =  getPlaceQuery(name, country, countryCode) \
+        .filter(Geoname.name == name) \
 
-            query = query.join(CountryInfo, Geoname.country == CountryInfo.iso_alpha2) \
-            .join(AlternateNameCountry, CountryInfo.geonameId == AlternateNameCountry.geonameid) \
-            .filter(AlternateNameCountry.alternateName == country)
+        query = queryMainSpelling.union(queryAlternateSpelling)
 
         results = query.all()
 
@@ -42,20 +61,13 @@ def register_routes(app):
         countryCode = request.args.get('countryCode')
         language = request.args.get('language')
 
-        query = db.session.query(Geoname) \
-        .join(AlternateName, Geoname.geonameid == AlternateName.geonameid) \
+        queryMainSpelling =  getPlaceQuery(name, country, countryCode) \
         .filter(AlternateName.alternateName == name) \
-        .filter(Geoname.fclass == 'P') \
-        .filter(Geoname.fcode.like('PPL%'))
 
-        if countryCode:
-          query = query.filter(Geoname.country == countryCode)
-        elif country:
-            AlternateNameCountry = aliased(AlternateName)
+        queryAlternateSpelling =  getPlaceQuery(name, country, countryCode) \
+        .filter(Geoname.name == name) \
 
-            query = query.join(CountryInfo, Geoname.country == CountryInfo.iso_alpha2) \
-            .join(AlternateNameCountry, CountryInfo.geonameId == AlternateNameCountry.geonameid) \
-            .filter(AlternateNameCountry.alternateName == country)
+        query = queryMainSpelling.union(queryAlternateSpelling)
 
         result = query.first()
 
