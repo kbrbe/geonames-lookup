@@ -125,6 +125,7 @@ class Geoname(db.Model):
             'country': self.country,
             'latitude': float(self.latitude),
             'longitude': float(self.longitude),
+            'population': self.population,
             'alternate_names': {}
         }
 

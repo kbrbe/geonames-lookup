@@ -2,7 +2,7 @@
 from flask import jsonify, request
 from .models import Geoname, AlternateName, CountryInfo
 from sqlalchemy.orm import aliased
-from . import db
+from . import db, cache, logger
 
  #-----------------------------------------------------------------------------
 def getPlaceQuery(name, country, countryCode):
@@ -35,6 +35,7 @@ def register_routes(app):
 
     #--------------------------------------------------------------------------
     @app.route('/places', methods=['GET'])
+    @cache.cached(timeout=2592000, query_string=True)
     def get_places():
         name = request.args.get('name')
         country = request.args.get('countryName')
@@ -51,10 +52,15 @@ def register_routes(app):
         results = query.all()
 
        
+        #if country:
+        #  logger.info(f'Cache miss for {name} ({country})')
+        #elif countryCode:
+        #  logger.info(f'Cache miss for {name} ({countryCode})')
         return jsonify([place.to_dict() for place in results]), (200 if results else 404)
 
     #--------------------------------------------------------------------------
     @app.route('/placename', methods=['GET'])
+    @cache.cached(timeout=2592000, query_string=True)
     def get_placename():
         name = request.args.get('name')
         country = request.args.get('countryName')
@@ -100,6 +106,7 @@ def register_routes(app):
 
     #--------------------------------------------------------------------------
     @app.route('/place/<int:geonameId>', methods=['GET'])
+    @cache.cached(timeout=2592000, query_string=False, key_prefix='place_id')
     def get_place(geonameId):
         place = db.session.query(Geoname).get(geonameId)
         if place:
