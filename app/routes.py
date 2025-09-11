@@ -89,6 +89,25 @@ def register_routes(app):
           else:
             return '', 404
 
+    #--------------------------------------------------------------------------
+    @app.route('/country', methods=['GET'])
+    @cache.cached(timeout=2592000, query_string=True)
+    def get_country_geoname_id():
+        countryCode = request.args.get('countryCode')
+
+        query = db.session.query(CountryInfo) \
+        .filter(CountryInfo.geonameId == countryCode)
+
+        results = query.all()
+
+        print(results)
+        #if country:
+        #  logger.info(f'Cache miss for {name} ({country})')
+        #elif countryCode:
+        #  logger.info(f'Cache miss for {name} ({countryCode})')
+        return jsonify([place.to_dict() for place in results]), (200 if results else 404)
+
+
 
     #--------------------------------------------------------------------------
 #    @app.route('/places/bulk', methods=['POST'])
