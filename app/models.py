@@ -1,5 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, foreign
 from sqlalchemy import ForeignKey
 
 db = SQLAlchemy()
@@ -113,29 +113,79 @@ class Geoname(db.Model):
     moddate = db.Column(db.Date)
 
     alternate_names_table = relationship('AlternateName', back_populates='geoname')
+    country_info = relationship('CountryInfo', 
+                                primaryjoin="Geoname.country == foreign(CountryInfo.iso_alpha2)", 
+                                viewonly=True, 
+                                uselist=False)
 
     def __repr__(self):
         return f"<Geoname(name={self.name}, geonameid={self.geonameid})>"
 
+    # -------------------------------------------------------------------------
+    def _get_preferred_name(self, lang=None):
+        if not lang:
+            return self.name
+
+        for alt in self.alternate_names_table:
+            if alt.isoLanguage == lang and alt.isPreferredName:
+                return alt.alternateName
+
+        # fallback to default name
+        return self.name
+
+
+    # -------------------------------------------------------------------------
+    def _get_alternate_names(self, lang=None):
+        result = {}
+
+        for alt in self.alternate_names_table:
+            if lang and alt.isoLanguage != lang:
+                continue
+
+            if alt.isoLanguage not in result:
+                result[alt.isoLanguage] = []
+
+            result[alt.isoLanguage].append(alt.alternateName)
+
+        return result
+
+    
+ 
     # app/models.py
-    def to_dict(self):
-        geoname_dict = {
-            'geonameId': self.geonameid,
-            'name': self.name,
-            'country': self.country,
-            'latitude': float(self.latitude),
-            'longitude': float(self.longitude),
-            'population': self.population,
-            'alternate_names': {}
+    def to_dict(self, fields=None, lang=None):
+        """
+        fields: list of requested fields (or None for full representation)
+        lang: language code affecting language-dependent fields
+        """
+
+        # --- Core field map ---
+        field_map = {
+            "geonameId": lambda: self.geonameid,
+            "name": lambda: self._get_preferred_name(lang),
+            "country.code": lambda: self.country,
+            "country.name": lambda: (
+                self.country_info.name if self.country_info else None
+            ),
+            "latitude": lambda: float(self.latitude) if self.latitude else None,
+            "longitude": lambda: float(self.longitude) if self.longitude else None,
+            "population": lambda: self.population,
+            "alternate_names": lambda: self._get_alternate_names(lang),
         }
 
-        # Populate the alternate names
-        for alt_name in self.alternate_names_table:
-            if alt_name.isoLanguage not in geoname_dict['alternate_names']:
-                geoname_dict['alternate_names'][alt_name.isoLanguage] = []
-            geoname_dict['alternate_names'][alt_name.isoLanguage].append(alt_name.alternateName)
-        
-        return geoname_dict
+        # --- Default: full representation ---
+        if not fields:
+            return {
+                key: resolver()
+                for key, resolver in field_map.items()
+            }
+
+        # --- Filtered representation ---
+        result = {}
+        for field in fields:
+            if field in field_map:
+                result[field] = field_map[field]()
+
+        return result
 
 class Hierarchy(db.Model):
     __tablename__ = 'hierarchy'
