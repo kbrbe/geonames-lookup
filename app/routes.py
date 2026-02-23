@@ -128,9 +128,14 @@ def register_routes(app):
     @cache.cached(timeout=2592000, query_string=False, key_prefix='place_id')
     def get_place(geonameId):
         place = db.session.query(Geoname).get(geonameId)
-        if place:
-            return jsonify(place.to_dict()), 200
-        return jsonify({'error': 'Place not found'}), 404
+        if not place:
+            return jsonify({'error': 'Place not found'}), 404
+     
+        fields_param = request.args.get("fields")
+        lang = request.args.get("lang")
+
+        fields = fields_param.split(",") if fields_param else None
+        return jsonify(place.to_dict(fields=fields, lang=lang)), 200
 
     #--------------------------------------------------------------------------
 #    @app.route('/place/<int:geonameId>/name', methods=['GET'])
