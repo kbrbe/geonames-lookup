@@ -1,5 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.orm import relationship, foreign
+from sqlalchemy.orm import relationship, foreign, object_session
 from sqlalchemy import ForeignKey
 
 db = SQLAlchemy()
@@ -149,7 +149,34 @@ class Geoname(db.Model):
 
         return result
 
-    
+    # -------------------------------------------------------------------------
+    def _get_country_name(self, lang=None):
+        if not self.country_info:
+            return None
+
+        # Default English name
+        default_name = self.country_info.name
+
+        if not lang:
+            return default_name
+
+        session = object_session(self)
+
+        alt = (
+            session.query(AlternateName)
+            .filter(
+                AlternateName.geonameid == self.country_info.geonameId,
+                AlternateName.isoLanguage == lang,
+                AlternateName.isPreferredName == True
+            )
+            .first()
+        )
+
+        if alt:
+            return alt.alternateName
+
+        return default_name
+        
  
     # app/models.py
     def to_dict(self, fields=None, lang=None):
@@ -163,9 +190,7 @@ class Geoname(db.Model):
             "geonameId": lambda: self.geonameid,
             "name": lambda: self._get_preferred_name(lang),
             "country.code": lambda: self.country,
-            "country.name": lambda: (
-                self.country_info.name if self.country_info else None
-            ),
+            "country.name": lambda: self._get_country_name(lang),
             "latitude": lambda: float(self.latitude) if self.latitude else None,
             "longitude": lambda: float(self.longitude) if self.longitude else None,
             "population": lambda: self.population,
