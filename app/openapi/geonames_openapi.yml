@@ -218,6 +218,30 @@ paths:
         404:
           description: Place not found.
 
+  /country/{countryCode}:
+    get:
+      summary: Retrieve the Geonames identifier of a given country.
+      description: Returns the Geonames identifier of the provided ISO 3166 country code.
+      parameters:
+        - name: countryCode
+          in: path
+          required: true
+          description: An ISO 3166 country code.
+          schema:
+            type: string
+            example: BE
+      responses:
+        200:
+          description: The Geonames ID of the given ISO 3166 country code.
+          content:
+            text/plain:
+              schema:
+                type: string
+        404:
+          description: Country not found.
+
+
+
   /place/{geonameId}/alternatenames:
     get:
       summary: Retrieve alternate names of a place by geonameId.
